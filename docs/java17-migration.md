@@ -90,5 +90,6 @@ stops the Compose app to free port 8080, builds SAP and the reactor, and runs
 the JAR in the foreground. Ctrl-C stops
 the application; `docker compose stop db` stops PostgreSQL without deleting data.
 
-Java 8 application adapter and a separate Java 21 module are not implemented
-in this package. The Java 8-compatible core is not a Java 8 API application.
+Java 8 application adapter and the separate Java 21 module were subsequently
+implemented and verified on actual JVMs. See [java-versions.md](java-versions.md)
+for the completed stage and test evidence.

@@ -1,0 +1,22 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+ <modelVersion>4.0.0</modelVersion>
+ <parent><groupId>dev.poc</groupId><artifactId>movie-query-parent</artifactId><version>1.0.0</version><relativePath>../pom.xml</relativePath></parent>
+ <artifactId>app-java21</artifactId>
+ <properties><java.version>21</java.version></properties>
+ <dependencies>
+  <dependency><groupId>dev.poc</groupId><artifactId>query-core</artifactId><version>${project.version}</version></dependency>
+  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-graphql</artifactId></dependency>
+  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
+  <dependency><groupId>org.springframework</groupId><artifactId>spring-orm</artifactId></dependency>
+  <dependency><groupId>org.eclipse.persistence</groupId><artifactId>eclipselink</artifactId><version>4.0.9</version></dependency>
+  <dependency><groupId>com.sap.olingo</groupId><artifactId>odata-jpa-processor</artifactId><version>${sap.version}</version></dependency>
+  <dependency><groupId>com.sap.olingo</groupId><artifactId>odata-jpa-processor-cb</artifactId><version>${sap.version}</version></dependency>
+  <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
+  <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId></dependency>
+  <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+  <dependency><groupId>org.springframework.graphql</groupId><artifactId>spring-graphql-test</artifactId><scope>test</scope></dependency>
+ </dependencies>
+ <build><sourceDirectory>${project.basedir}/../app-java17/src/main/java</sourceDirectory><testSourceDirectory>${project.basedir}/../app-java17/src/test/java</testSourceDirectory><resources><resource><directory>${project.basedir}/../app-java17/src/main/resources</directory></resource></resources><testResources><testResource><directory>${project.basedir}/../app-java17/src/test/resources</directory></testResource></testResources><finalName>movie-query-poc-java21-1.0.0</finalName><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
+<profiles><profile><id>integration</id><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions></plugin></plugins></build></profile></profiles>
+</project>

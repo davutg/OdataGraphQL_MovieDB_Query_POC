@@ -28,18 +28,18 @@ Verified on 2026-10-05 with OpenJDK 17.0.20:
 - Total: 68 checks PASS, zero compilation warnings.
 
 This is Java 8 target/API verification and Java 17 execution. Actual Java 8 runtime
-execution has not been performed. After compilation, run both contract mains with
+execution subsequently passed all 68 checks in the 2026-10-06 Docker matrix. After compilation, run both contract mains with
 JDK 8 to complete that runtime check.
 
 `mvn -f query-core/pom.xml package` builds the library. The dependency-free contract
 mains are run by verify.sh and by exec-maven-plugin in the Maven test phase, not Surefire.
-Maven execution was not performed in this environment.
+Maven verification subsequently passed under actual JDK 8, 17 and 21 in the
+2026-10-06 Docker matrix.
 
 ## Adapter responsibilities and next stage
 
 The reactor parent and app-java17 adapters now consume this module. Application
-verification is pending; see ../docs/java17-migration.md. Stage 3 will add app-java8
-with compatible dependencies after Java 17 integration validation.
+verification and Java 8/21 adapters are complete; see ../docs/java-versions.md.
 
 Adapters parse OData/GraphQL syntax, collect every nested filter/order field and measure
 actual depth/complexity before calling QueryPolicy. They bind cursors to a canonical

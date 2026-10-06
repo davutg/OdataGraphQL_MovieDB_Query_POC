@@ -1,0 +1,10 @@
+target/
+**/target/
+/.pmd
+
+# JDT-specific (Eclipse Java Development Tools)
+.classpath
+# --- EclipseIDE stuff START
+.settings/
+.metadata
+/.sts4-cache/

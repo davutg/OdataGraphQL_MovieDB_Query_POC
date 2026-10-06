@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/movies?prepareThreshold=0}
+    username: ${DB_USER:movies}
+    password: ${DB_PASSWORD:movies_dev_only}
+    hikari:
+      maximum-pool-size: 8
+      connection-timeout: 2000
+      connection-init-sql: "SET statement_timeout = '3000ms'"
+  graphql:
+    path: /_disabled-graphql
+    graphiql:
+      enabled: true
+    schema:
+      printer:
+        enabled: false
+server:
+  port: ${PORT:8080}
+poc:
+  cursor-secret-base64: ${CURSOR_SECRET_BASE64:}
+  cursor-ttl-ms: ${CURSOR_TTL_MS:300000}
+  default-top: 100
+  max-top: ${MAX_TOP:500}
+  page-size: 50
+  max-offset: 10000
+  max-expand-depth: 2
+  max-query-complexity: 2000
+  request-timeout-ms: 5000
+  db-timeout-ms: 3000
+  rate-per-minute: 60
+  max-concurrent-requests: 8
+  index-policy:
+    # Client may choose OFF/AUDIT/ENFORCE only when allow-client-selection=true.
+    mode: ${INDEX_POLICY_MODE:OFF}
+    allow-client-selection: ${INDEX_POLICY_CLIENT_SELECTION:true}
+    min-table-rows: ${INDEX_POLICY_MIN_ROWS:10000}
+    max-plan-cost: ${INDEX_POLICY_MAX_COST:100000}

@@ -1,0 +1,22 @@
+ARG JAVA_VERSION=21
+FROM maven:3.9.9-eclipse-temurin-${JAVA_VERSION} AS build
+ARG APP_MODULE=app-java21
+ARG MAVEN_PROFILE=java21
+ARG SAP_SOURCE=sap
+WORKDIR /build
+COPY vendor/ /build/vendor/
+RUN mvn -B -ntp -f vendor/${SAP_SOURCE}/jpa/pom.xml -pl odata-jpa-processor,odata-jpa-processor-cb -am install -Dmaven.test.skip=true -Dduplicate-finder.skip=true
+COPY pom.xml /build/app/pom.xml
+COPY query-core /build/app/query-core
+COPY app-java17 /build/app/app-java17
+COPY app-java8 /build/app/app-java8
+COPY app-java21 /build/app/app-java21
+WORKDIR /build/app
+RUN mvn -B -ntp -P${MAVEN_PROFILE} -pl ${APP_MODULE} -am verify && cp ${APP_MODULE}/target/movie-query-poc-*.jar /build/application.jar
+ARG JAVA_VERSION
+FROM eclipse-temurin:${JAVA_VERSION}-jre
+WORKDIR /app
+COPY --from=build /build/application.jar app.jar
+USER 10001
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","app.jar"]

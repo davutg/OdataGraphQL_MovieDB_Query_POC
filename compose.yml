@@ -1,3 +1,9 @@
+x-app-healthcheck: &app-healthcheck
+  test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /api/capabilities HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3; IFS= read -r status <&3; [[ \"$$status\" == *\" 200 \"* ]]"]
+  interval: 3s
+  timeout: 3s
+  retries: 20
+  start_period: 10s
 services:
   db:
     image: postgres:16.6
@@ -18,7 +24,46 @@ services:
       DB_URL: jdbc:postgresql://db:5432/movies?prepareThreshold=0
       DB_USER: movies
       DB_PASSWORD: movies_dev_only
+    healthcheck: *app-healthcheck
     ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+  app-java8:
+    profiles: ["variants"]
+    build:
+      context: .
+      dockerfile: Dockerfile.versions
+      args:
+        JAVA_VERSION: "8"
+        APP_MODULE: app-java8
+        MAVEN_PROFILE: java8
+        SAP_SOURCE: sap-java8
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/movies?prepareThreshold=0
+      DB_USER: movies
+      DB_PASSWORD: movies_dev_only
+    healthcheck: *app-healthcheck
+    ports: ["127.0.0.1:8082:8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+  app-java21:
+    profiles: ["variants"]
+    build:
+      context: .
+      dockerfile: Dockerfile.versions
+      args:
+        JAVA_VERSION: "21"
+        APP_MODULE: app-java21
+        MAVEN_PROFILE: java21
+        SAP_SOURCE: sap
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/movies?prepareThreshold=0
+      DB_USER: movies
+      DB_PASSWORD: movies_dev_only
+    healthcheck: *app-healthcheck
+    ports: ["127.0.0.1:8081:8080"]
     depends_on:
       db:
         condition: service_healthy

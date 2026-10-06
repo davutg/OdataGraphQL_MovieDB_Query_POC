@@ -1,3 +1,6 @@
 **/target
 .git
 *.zip
+
+work
+.DS_Store

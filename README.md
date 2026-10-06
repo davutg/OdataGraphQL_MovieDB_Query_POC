@@ -2,6 +2,28 @@
 
 Java Spring Boot, PostgreSQL ve gerçek **SAP Olingo JPA Processor** ile aynı film verisini iki API üzerinden sorgulayan, sorgu korumaları ve opsiyonel indeks plan kontrolü içeren çalıştırılabilir POC.
 
+## Java 8 / 17 / 21 modülleri
+
+Çalışan Java 17 başlangıç kopyası **RUNNING1** etiketiyle korunuyor.
+Üç sürümü birlikte çalıştırın:
+
+```bash
+docker compose --profile variants up -d --build --wait
+```
+
+| Java | Modül | Sorgu arayüzü |
+|---|---|---|
+| 8 | app-java8 — Spring Boot 2 / javax / SAP 1.1.1 | http://localhost:8082 |
+| 17 | app-java17 — Spring Boot 3 / Jakarta / SAP 2.5.0 | http://localhost:8080 |
+| 21 | app-java21 — aynı modern kaynaklar, Java 21 bytecode/JVM | http://localhost:8081 |
+
+Üçü de aynı PostgreSQL verisini, query-core politikalarını ve görsel UI'ı kullanır.
+UI başlığı gerçek Java sürümünü gösterir. Her JVM'de 68 core kontrolü ve 17 gerçek
+PostgreSQL entegrasyon testi geçti; birim testleri Java 8'de 47, Java 17/21'de 43.
+`bash scripts/verify-matrix.sh` testleri gerçek JDK 8, 17 ve 21 konteynerlerinde
+tekrarlar. `python3 scripts/smoke-matrix.py` çalışan üç servisi kontrol eder.
+Ayrıntılar: [docs/java-versions.md](docs/java-versions.md).
+
 ## Başlatma
 
 **Docker Desktop / OrbStack + Docker Compose**:
@@ -43,8 +65,8 @@ Betik sistem varsayılanından bağımsız olarak Java 17 seçer (SDKMAN dahil),
 PostgreSQL hazır olana kadar bekler, SAP/reactor derlemesini ve birim testlerini
 çalıştırır, ardından uygulamayı başlatır. `JAVA_HOME` elle de verilebilir.
 6 Ekim 2026 Mac doğrulaması: 68 core kontrolü, 43 birim ve 17 PostgreSQL
-entegrasyon testi geçti. Mevcut uygulama modülü `app-java17`; Java 8 ve
-ayrı Java 21 uygulama modülleri henüz eklenmedi.
+entegrasyon testi geçti. Java 8 ve 21 modülleri de eklendi ve gerçek JVM testleri tamamlandı;
+üçlü çalıştırma için yukarıdaki `variants` profilini kullanın.
 
 ## Hızlı örnekler
 
@@ -143,17 +165,11 @@ Testler: top/offset sınırları, OData filtre grameri ve allow-list, expand der
 Ek örnekler: [docs/queries.http](docs/queries.http), [docs/graphql-examples.graphql](docs/graphql-examples.graphql), [docs/index-policy.md](docs/index-policy.md). Önceki tek modüllü sürümün sonuçları [docs/verification.md](docs/verification.md), bu değişikliğin durumu [docs/java17-migration.md](docs/java17-migration.md) dosyasındadır.
 
 
-## Java 8/17 migration — stage 2
+## Ortak sorgu çekirdeği
 
-Root `pom.xml` is now a reactor parent with `query-core` (Java 8 target, no runtime
-framework dependency) and `app-java17` (Spring Boot 3 / Jakarta / SAP). The application
-imports core cursors and policy errors directly. Spring Limits is only a binding adapter;
-OData and GraphQL share field policies and paging budgets, and the JDBC guard delegates
-estimated-plan decisions to the core. HTTP, syntax parsing, JDBC and framework code stay
-in app-java17. API paths and the query UI are unchanged.
-
-Run `mvn verify` for core contracts and application unit tests; run
-`mvn verify -Pintegration` against PostgreSQL for the real API/plan tests.
-The 2026-10-06 local Mac run verified 68 core checks, 43 application unit tests
-and 17 PostgreSQL integration tests on Java 17. See docs/java17-migration.md.
-Java 8 runtime validation and app-java8 are the next stage after Java 17 integration is verified.
+`query-core` Java 8 hedeflidir ve framework bağımlılığı içermez. Java 8 adaptörü
+javax/Spring Boot 2, Java 17/21 adaptörleri Jakarta/Spring Boot 3 kullanır.
+Java 21 modülü Java 17 kaynak/test ağacını paylaşır ve kendi Java 21 JAR'ını üretir.
+Sözdizimi, HTTP, JDBC ve framework kodu adaptörlerde kalır; alan izinleri,
+sayfalama bütçesi, cursor ve tahmini index planı kararları ortak çekirdektedir.
+Tam matris doğrulaması [docs/java-versions.md](docs/java-versions.md) dosyasındadır.

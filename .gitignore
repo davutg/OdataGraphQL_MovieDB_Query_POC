@@ -2,3 +2,5 @@ target/
 .idea/
 *.log
 .env
+.DS_Store
+work/

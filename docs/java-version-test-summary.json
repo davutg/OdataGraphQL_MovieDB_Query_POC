@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-06",
+  "baseline": {
+    "commit": "a716aa0c1d24a316fdebe631748c5777a0d98633",
+    "tag": "RUNNING1"
+  },
+  "modules": [
+    {
+      "module": "app-java8",
+      "coreChecks": 68,
+      "unitTests": 47,
+      "integrationTests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testRuntime": "1.8.0_452",
+      "classMajorVersion": 52,
+      "dockerImageBuild": "PASS",
+      "liveSmoke": "PASS"
+    },
+    {
+      "module": "app-java17",
+      "coreChecks": 68,
+      "unitTests": 43,
+      "integrationTests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testRuntime": "17.0.15",
+      "classMajorVersion": 61,
+      "dockerImageBuild": "PASS",
+      "liveSmoke": "PASS"
+    },
+    {
+      "module": "app-java21",
+      "coreChecks": 68,
+      "unitTests": 43,
+      "integrationTests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "testRuntime": "21.0.7",
+      "classMajorVersion": 65,
+      "dockerImageBuild": "PASS",
+      "liveSmoke": "PASS"
+    }
+  ],
+  "liveSmoke": [
+    {
+      "module": "app-java8",
+      "port": 8082,
+      "runtime": "1.8.0_504",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    },
+    {
+      "module": "app-java17",
+      "port": 8080,
+      "runtime": "17.0.20.1",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    },
+    {
+      "module": "app-java21",
+      "port": 8081,
+      "runtime": "21.0.12.1",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    }
+  ]
+}
