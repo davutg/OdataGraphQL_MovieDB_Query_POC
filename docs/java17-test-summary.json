@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-05",
+  "stage": "java17-migration",
+  "implementation": "present",
+  "verification": "partial",
+  "runtime": "OpenJDK 17.0.20",
+  "core_target_release": 8,
+  "core_checks_passed": 68,
+  "application_sources_syntax_parsed": 26,
+  "reactor_descriptors": "passed",
+  "maven_reactor": "not_run",
+  "application_unit_tests": "not_run",
+  "postgresql_integration": "not_run",
+  "docker_build": "not_run",
+  "actual_java8_runtime": "not_run",
+  "blocker": "Maven/PostgreSQL unavailable; dependency downloads timed out"
+}

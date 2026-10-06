@@ -1,0 +1,37 @@
+# Submit one operation at a time or supply operationName.
+query HighRatedMovies {
+  movies(first: 100, filter: {yearFrom: 2010, ratingMin: 8.5}, orderBy: RATING, descending: true) {
+    nodes { id title year rating genre director { id name } }
+    totalCount
+    pageInfo { hasNextPage endCursor }
+  }
+}
+
+query IndexedMovies($genre: String!, $first: Int = 10) {
+  movies(first: $first, filter: {genre: $genre}) {
+    nodes { id title genre }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+# variables: {"genre":"RareGenre"}
+
+query ExactYear {
+  movies(first: 10, filter: {year: 2010}) { nodes { id title year } }
+}
+
+query RatingRange {
+  movies(filter: {ratingMin: 8.0, ratingMax: 9.0}) { nodes { id title rating } }
+}
+
+query OverBudget {
+  movies(first: 501) { nodes { id } }
+}
+
+query ForbiddenOrder {
+  movies(orderBy: TITLE) { nodes { id } }
+}
+
+query UnindexedTitle {
+  movies(filter: {title: "Inception"}) { nodes { id title } }
+}
+# X-Index-Policy: ENFORCE => rejection on a large movies relation.

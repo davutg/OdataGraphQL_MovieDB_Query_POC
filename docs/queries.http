@@ -1,0 +1,72 @@
+@base = http://localhost:8080
+
+### Real SAP OData metadata
+GET {{base}}/odata/$metadata
+
+### Select, filter, stable order, to-one expand and count
+GET {{base}}/odata/Movies?$filter=Year ge 2010 and Rating ge 8.5&$orderby=Rating desc&$top=100&$select=Id,Title,Year,Rating,Genre&$expand=Director($select=Name)&$count=true
+X-Index-Policy: AUDIT
+
+### Selective indexed filter (ENFORCE should pass after ANALYZE)
+GET {{base}}/odata/Movies?$filter=Genre eq 'RareGenre'&$top=10
+X-Index-Policy: ENFORCE
+
+### Allowed filter but unindexed column (ENFORCE should reject)
+GET {{base}}/odata/Movies?$filter=Title eq 'Inception'
+X-Index-Policy: ENFORCE
+
+### Same sequential scan is reported but permitted in AUDIT
+GET {{base}}/odata/Movies?$filter=Title eq 'Inception'
+X-Index-Policy: AUDIT
+
+### Result budget 75 gives first server page 50, then nextLink gives 25
+GET {{base}}/odata/Movies?$top=75&$orderby=Id asc
+X-Index-Policy: OFF
+
+### Negative case: top over limit
+GET {{base}}/odata/Movies?$top=501
+
+### Negative case: order allow-list
+GET {{base}}/odata/Movies?$orderby=Title asc
+
+### Negative case: unbounded recursive expand
+GET {{base}}/odata/Movies?$expand=Director($expand=Movies($expand=Director))
+
+### Negative case: aggregation unsupported
+GET {{base}}/odata/Movies?$apply=aggregate(Rating with average as AverageRating)
+
+### GraphQL selective filter; variable binding
+POST {{base}}/graphql
+Content-Type: application/json
+X-Index-Policy: ENFORCE
+
+{
+  "operationName": "Movies",
+  "query": "query Movies($genre:String!,$first:Int!){movies(first:$first,filter:{genre:$genre},orderBy:ID){nodes{id title genre director{name}} pageInfo{hasNextPage endCursor}}}",
+  "variables": {"genre":"RareGenre","first":10}
+}
+
+### GraphQL count is inspected too; broad count can be rejected
+POST {{base}}/graphql
+Content-Type: application/json
+X-Index-Policy: ENFORCE
+
+{"query":"{movies(first:0){totalCount}}"}
+
+### GraphQL ordering policy rejection
+POST {{base}}/graphql
+Content-Type: application/json
+
+{"query":"{movies(orderBy:TITLE){nodes{id title}}}"}
+
+### GraphQL explicit budget with server continuation
+POST {{base}}/graphql
+Content-Type: application/json
+
+{"query":"{movies(first:75){nodes{id title} pageInfo{hasNextPage endCursor}}}"}
+
+### GraphQL after: paste the previous endCursor, keep same filter/order
+POST {{base}}/graphql
+Content-Type: application/json
+
+{"query":"query($cursor:String!){movies(first:75,after:$cursor){nodes{id title} pageInfo{hasNextPage endCursor}}}","variables":{"cursor":"PASTE_CURSOR"}}

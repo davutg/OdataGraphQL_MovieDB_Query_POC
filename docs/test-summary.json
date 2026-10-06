@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-03",
+  "database": "PostgreSQL 16.6",
+  "results": [
+    {
+      "suite": "dev.poc.CursorCodecTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.047,
+      "java": "21.0.12.1"
+    },
+    {
+      "suite": "dev.poc.GuardedDataSourceTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.567,
+      "java": "21.0.12.1"
+    },
+    {
+      "suite": "dev.poc.ODataPolicyTest",
+      "tests": 18,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.029,
+      "java": "21.0.12.1"
+    },
+    {
+      "suite": "dev.poc.RequestGateTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 0.35,
+      "java": "21.0.12.1"
+    },
+    {
+      "suite": "dev.poc.ApiIT",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.292,
+      "java": "21.0.12.1"
+    }
+  ],
+  "total": 52,
+  "ui": "Passed Chromium desktop and mobile flows",
+  "docker": "Not executed: Docker is unavailable in the execution environment"
+}

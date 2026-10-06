@@ -1,0 +1,7 @@
+type Query { movies(filter: MovieFilter, orderBy: MovieOrder = ID, descending: Boolean = false, first: Int, after: String): MovieConnection! }
+input MovieFilter { id: ID, genre: String, year: Int, yearFrom: Int, yearTo: Int, rating: Float, ratingMin: Float, ratingMax: Float, title: String }
+enum MovieOrder { ID YEAR RATING GENRE TITLE }
+type MovieConnection { nodes: [Movie!]!, totalCount: Int!, pageInfo: PageInfo! }
+type PageInfo { hasNextPage: Boolean!, endCursor: String }
+type Movie { id: ID!, title: String!, year: Int!, rating: Float!, genre: String!, director: Director! }
+type Director { id: ID!, name: String! }
