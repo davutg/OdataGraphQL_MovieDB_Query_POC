@@ -173,3 +173,11 @@ Java 21 modülü Java 17 kaynak/test ağacını paylaşır ve kendi Java 21 JAR'
 Sözdizimi, HTTP, JDBC ve framework kodu adaptörlerde kalır; alan izinleri,
 sayfalama bütçesi, cursor ve tahmini index planı kararları ortak çekirdektedir.
 Tam matris doğrulaması [docs/java-versions.md](docs/java-versions.md) dosyasındadır.
+
+## English documentation
+
+- [Architecture, usage, and configuration](docs/architecture-and-user-guide.md) — running the applications, query builder, API examples, paging, policies, configuration, and troubleshooting.
+- [Developer implementation](docs/developer-implementation-guide.md) — core contracts and data structures, protocol evaluation, SQL plan inspection, request lifecycle, module compatibility, and extension guidance.
+
+- [OData cheatsheet](docs/odata-cheatsheet.md) — query syntax, navigation, depth, and POC restrictions.
+- [GraphQL cheatsheet](docs/graphql-cheatsheet.md) — selections, variables, relationships, depth, and pagination.
