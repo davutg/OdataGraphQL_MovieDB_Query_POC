@@ -19,7 +19,8 @@ flowchart LR
   Gate --> OD[ODataPolicy / SAP / EclipseLink]
   Gate --> GQ[GraphQL instrumentation / MovieGraphql]
   OD --> JDBC[GuardedDataSource]
-  GQ --> JDBC
+  GQ --> Repo[Spring Data / Querydsl / EclipseLink]
+  Repo --> JDBC
   JDBC --> PG[(PostgreSQL)]
   OD -. rules .-> Core[query-core]
   GQ -. rules and cursor .-> Core
@@ -84,7 +85,7 @@ Encoding checks nonnegative offset/budget and fingerprint shape, then computes e
 
 `CoreConfig` decodes `CURSOR_SECRET_BASE64`, or creates a random 32-byte startup key. The default TTL is five minutes. An injected `Clock` makes cursor tests deterministic.
 
-The current GraphQL fingerprint combines the generated WHERE fragment, parameter-list representation, mapped order column, and direction. It binds the current filter/order semantics, not the entire GraphQL document: selection fields and `first` are not included. Remaining budget is independently enforced. The format is adapter-specific, not a general canonical AST representation or an authorization token.
+The GraphQL adapter hashes canonical JSON for `["querydsl-v1", entityClassName, normalizedFilter, orderProperty, descending]`. The filter is a sorted map with null inputs omitted, so input field order does not change the fingerprint. JSON preserves value boundaries, avoiding collisions caused by concatenating strings or parameter-list representations. This normalization retains input values rather than proving semantic equivalence between all possible representations. Selection fields and `first` are excluded; the cursor separately limits remaining budget. The version marker intentionally separates this contract from older JDBC cursors, which must be restarted after migration. A cursor is not an authorization token.
 
 ## 4. Estimated plan evaluator
 
@@ -140,7 +141,7 @@ Continuation state is a synchronized, insertion-ordered map of opaque UUID token
 
 Unlike GraphQL, OData continuation is process-local and its TTL is fixed in code. Java 8 supports SAP 1.1.1's quoted UUID links and nullable paging API; modern SAP uses its newer return contracts. The Java 8 entities also use public constructors required by that older metadata reflection path.
 
-## 6. GraphQL evaluation and SQL construction
+## 6. GraphQL evaluation and Querydsl/JPA integration
 
 Sources: [schema](../app-java17/src/main/resources/graphql/schema.graphqls), [GraphqlConfig](../app-java17/src/main/java/dev/poc/GraphqlConfig.java), [GraphqlHttpController](../app-java17/src/main/java/dev/poc/GraphqlHttpController.java), and [MovieGraphql](../app-java17/src/main/java/dev/poc/MovieGraphql.java).
 
@@ -152,28 +153,54 @@ Instrumentation disables introspection and bounds structural depth to `maxExpand
 
 GraphQL structural depth is not the same measurement as OData expand syntax. In particular, wrapper allowance means changing the core depth setting does not translate into an identical relationship-depth rule across both protocols.
 
-### Resolver data structures
+### Thin resolver and reusable connection adapter
 
-`MovieFilter` represents nullable typed filters: ID, genre, title, exact/ranged year, and exact/ranged rating. ID text is parsed as a long; invalid ID input produces `FILTER_VALUE`. Text filters are length-limited. Fixed field mappings produce SQL identifiers, and user values become JDBC parameters. Order enums are mapped to core names before constructing SQL; `TITLE` is rejected by the core order allow-list.
+[MovieGraphql](../app-java17/src/main/java/dev/poc/MovieGraphql.java) registers the movie policy-field mapping and delegates to `QuerydslConnection<Movie>`. It no longer builds SQL, maps JDBC rows, or tests selection paths such as `nodes/director`. Its `totalCount` schema resolver delegates to the same connection adapter.
 
-`ConnectionPage` contains:
+The reusable and entity-specific pieces are:
+
+| Component | Responsibility |
+|---|---|
+| [MovieRepository](../app-java17/src/main/java/dev/poc/MovieRepository.java) | Entity-specific allowed Querydsl properties and equality/range bindings. |
+| [QueryRepository](../app-java17/src/main/java/dev/poc/query/QueryRepository.java) | Extends `JpaRepository` and `QuerydslPredicateExecutor`, adding a count-free bounded window operation. |
+| [QueryRepositoryImpl](../app-java17/src/main/java/dev/poc/query/QueryRepositoryImpl.java) | Generic repository base; executes a sorted, offset/limit Querydsl JPA query. |
+| [QuerydslConnection](../app-java17/src/main/java/dev/poc/query/QuerydslConnection.java) | Shared filter binding, core validation, cursor fingerprint, lookahead, and connection response. |
+| Generated `QMovie` | Typed entity paths produced by Querydsl annotation processing from JPA mappings. |
+| [JpaConfig](../app-java17/src/main/java/dev/poc/JpaConfig.java) | Registers the repository base and JPA transaction manager, using the same EclipseLink entity manager factory as OData. |
+
+This is a custom, reusable connection adapter built on Spring Data Querydsl infrastructure. It is not Spring GraphQL's `QuerydslDataFetcher` auto-registration, and it does not auto-generate the GraphQL schema. The adapter preserves the existing schema, signed total-budget cursor semantics and Java 8 compatibility. Entity-specific allow-lists and range semantics remain explicit.
+
+### Filter binding and ordering
+
+The schema supplies nullable typed inputs for ID, genre, title, exact/ranged year, and exact/ranged rating. `QuerydslConnection` receives a filter map, ignores nulls, validates each key against its policy mapping and core filter allow-list, and rejects strings longer than 200 characters. Empty strings produce `FILTER_VALUE`: Spring's binder would otherwise treat them as absent, silently widening a query. Conversion failures, including nonnumeric IDs, also become `FILTER_VALUE`.
+
+Spring Data's `QuerydslPredicateBuilder` uses the conversion service and generated entity paths to construct each predicate. `MovieRepository.bindingsFor(input)` creates an independent binding set for each input. Exact fields retain equality; `yearFrom`/`ratingMin` bind `goe`, while `yearTo`/`ratingMax` bind `loe`. The resulting predicates combine with AND. Separate binding sets prevent lower and upper bounds on the same property from overwriting one another, and allow equality plus ranges to coexist.
+
+Ordering maps the enum to a property and validates the corresponding core field. `TITLE` remains rejected by policy. `Sort` adds ascending ID as a tie-breaker unless ID itself is the requested order. Querydsl and EclipseLink translate the predicate and sorting into parameterized persistence queries; application code does not concatenate SQL identifiers or values.
+
+### Page structures and database work
+
+`QuerydslConnection.Page<T>` contains:
 
 | Field | Use |
 |---|---|
-| `nodes` | List of movie maps returned by JDBC. |
-| `pageInfo` | `hasNextPage` and optional signed `endCursor`. |
-| `where` | Internal SQL fragment reused by the count resolver. |
-| `params` | Copied parameter list for that fragment. |
+| `nodes` | An unmodifiable list of ORM entity objects, such as `Movie`. |
+| `pageInfo` | Typed `PageInfo` with `hasNextPage` and optional signed `endCursor`. |
+| `predicate` | Private Querydsl predicate reused for the optional count; not a GraphQL field. |
 
-Only schema fields are exposed. Internal SQL fields are not GraphQL output fields.
+GraphQL reads entity getters according to the schema. No nested row maps or stored SQL fragments are needed.
 
-The resolver builds a deterministic WHERE fragment and parameter list, validates order/top, and computes the fingerprint. If `after` is present, it decodes the cursor, validates offset, and uses the smaller of requested first and cursor remaining budget.
+The adapter validates top/order/filter and fingerprints the normalized request. If `after` exists, it verifies the cursor, validates its offset and caps the new budget at the smaller of requested `first` and cursor remaining. The repository fetches at most `min(remaining, pageSize + 1)` entities; a lookahead entity is trimmed and proves another page exists. A zero-sized window returns an empty list without issuing an entity SELECT. Selecting `totalCount` can still issue a count even for `first: 0`.
 
-Lookahead SQL requests `min(remaining, pageSize + 1)` rows, or zero for an empty page. An extra row proves that another page exists; it is trimmed from output. No extra row is needed when the page exhausts the budget. ID is a tie-breaker unless ID itself is the selected order.
+`totalCount` runs only when selected, using `repository.count(page.predicate)` and a checked conversion to the schema's integer result. The custom window avoids the automatic count that a conventional Spring Data `Page` request can require. Each ORM-generated SELECT passes through the JDBC guard.
 
-Movie scalar columns are fetched together. A director selection triggers a join, rather than a query for every node. `totalCount` has its own resolver using the stored WHERE/parameters and runs only when selected. Each SELECT is independently inspected by the JDBC guard.
+### Relationships, aliases and ORM loading
 
-`withState` restores the request state around resolver work using the GraphQL context, then restores/removes the previous thread-local value in `finally`. This explicit bridge ensures JDBC inspection sees the right request even when GraphQL invokes a fetcher on another thread; it is not an automatic propagation mechanism for arbitrary asynchronous work.
+`Movie.director` uses JPA `@ManyToOne(fetch = EAGER)` plus EclipseLink `@JoinFetch(OUTER)`. EclipseLink fetches the singular director with the movie entity query, avoiding one separate lookup per movie. This is intentionally an entity fetch policy: the director is joined even when the GraphQL selection omits it. Fewer selected response fields therefore do not imply fewer fetched database columns or joins.
+
+Aliases, fragments and conditional selections are handled by GraphQL's field execution. They do not drive a handwritten selection-path check in the resolver. Adding a collection relationship would require a fresh loading/paging review; this singular join strategy must not be assumed safe for arbitrary to-many pagination.
+
+`withState` restores request state around repository work using GraphQL context, then restores/removes the previous thread-local value in `finally`. This makes the JDBC guard see the correct request even if a fetcher runs on another thread; it does not automatically propagate state into arbitrary asynchronous work.
 
 ## 7. Shared JDBC boundary
 
@@ -181,7 +208,7 @@ Sources: [DataSourceConfig](../app-java17/src/main/java/dev/poc/DataSourceConfig
 
 ### Connection and statement wrappers
 
-`DataSourceConfig` creates a Hikari pool sized to `maxConcurrentRequests`, with a two-second connection acquisition timeout and configured PostgreSQL statement timeout, then wraps it. Both JPA and `JdbcTemplate` receive the wrapper.
+`DataSourceConfig` creates a Hikari pool sized to `maxConcurrentRequests`, with a two-second connection acquisition timeout and configured PostgreSQL statement timeout, then wraps it. OData and GraphQL both reach this wrapper through EclipseLink/JPA. Keeping the JDBC starter supplies infrastructure such as the pool; the GraphQL resolver no longer uses `JdbcTemplate`.
 
 JDK proxies wrap connections and statements. Preparing/creating statements updates the connection timeout budget. Prepared-statement setter calls are recorded in an index-ordered map of `Binding(method, cloned arguments)`; `clearParameters` clears that state. The guard replays the same setters onto the EXPLAIN statement. It does not interpolate values into SQL. Stream/reader parameter replay is rejected as unavailable rather than consuming the input. Argument arrays are cloned; mutable objects are not deeply copied.
 
@@ -253,7 +280,7 @@ Java 8 shares these UI/schema/migration resources while retaining its own applic
 
 ## 10. Extension and verification guidance
 
-When adding a field, update the database/model and schema, protocol normalization/mapping, core allow-lists, UI options, and parameterized SQL as appropriate. Decide filtering and ordering separately. When adding relationships, revisit expand grammar, structural depth, complexity estimates, SQL joins, and count behavior. Adding an enum entry alone does not grant permission.
+When adding a field, update the database/JPA model and GraphQL schema, protocol normalization, repository bindings, core allow-lists and UI options as appropriate. Querydsl annotation processing regenerates typed paths. Decide filtering and ordering separately. For another entity, reuse `QueryRepository` and `QuerydslConnection`, while explicitly defining its API and policy mappings. When adding relationships, revisit expand grammar, structural depth, complexity estimates, ORM fetching and count behavior. Adding an enum entry alone does not grant permission.
 
 New asynchronous work must carry request state explicitly. New SQL execution styles must stay inside the guarded data source and have interception coverage. New public routes require an explicit decision about request gating. A multi-instance deployment would require shared OData continuation/rate/report stores if consistent cross-instance behavior is needed; a shared GraphQL signing key only solves cursor verification.
 
@@ -271,6 +298,10 @@ bash scripts/verify-matrix.sh
 python3 scripts/smoke-matrix.py
 ```
 
-The matrix script runs builds sequentially on actual JDK 8, 17, and 21 containers because the reactors share `query-core/target`. It starts PostgreSQL and runs integration verification. The smoke script requires the three applications to be running. Recorded validation and exact runtime/build details are in [Java versions](java-versions.md) and [test summary](java-version-test-summary.json).
+The matrix script runs builds sequentially on actual JDK 8, 17, and 21 containers against the shared PostgreSQL seed. Each build copies source into an isolated directory so host IDE compilation cannot overwrite Maven classes. Reports are copied to `work/matrix/java8`, `java17`, and `java21`. It starts PostgreSQL and runs integration verification. The smoke script requires the three applications to be running. Migration validation is in [Querydsl verification](querydsl-verification.json). Earlier runtime/build results remain in [Java versions](java-versions.md) and its [historical test summary](java-version-test-summary.json).
 
 The `RUNNING1` tag preserves the original running Java 17 baseline; later module work is separate. Historical reports describe their recorded snapshots, while the source links in this guide describe the current implementation.
+
+## 11. Migration baseline
+
+The handwritten JDBC implementation is preserved on Git branch `archive/jdbc-template` at commit `401fd16`. The endpoint URLs and GraphQL schema remain compatible; old continuation cursors must be restarted because the fingerprint format changed. Java 17/21 use Jakarta Querydsl artifacts and Java 8 uses the javax-compatible stack. The existing PowerPoint is a historical snapshot of the earlier implementation.

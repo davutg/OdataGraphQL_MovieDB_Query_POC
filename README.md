@@ -2,6 +2,17 @@
 
 Java Spring Boot, PostgreSQL ve gerçek **SAP Olingo JPA Processor** ile aynı film verisini iki API üzerinden sorgulayan, sorgu korumaları ve opsiyonel indeks plan kontrolü içeren çalıştırılabilir POC.
 
+## Querydsl / JPA GraphQL
+
+GraphQL artık Spring Data, Querydsl ve EclipseLink ile ortak JPA entity modelini kullanır.
+Movie resolver içinde SQL, ResultSet eşleme veya `nodes/director` ile join seçimi yoktur.
+Ortak connection adaptörü limitleri, imzalı cursor ve toplam sonuç bütçesini korur.
+JDBC sürümü `archive/jdbc-template` dalında (`401fd16`) saklanır.
+
+- [Migration and implementation choices](docs/querydsl-migration.md)
+- [When to choose OData or GraphQL](docs/choosing-odata-or-graphql.md)
+
+
 ## Java 8 / 17 / 21 modülleri
 
 Çalışan Java 17 başlangıç kopyası **RUNNING1** etiketiyle korunuyor.
@@ -134,7 +145,7 @@ poc:
 | AUDIT | Plan raporlanır; politika ihlali sorguyu engellemez |
 | ENFORCE | Büyük tablodaki Seq Scan / Parallel Seq Scan, yüksek tahmini maliyet veya doğrulanamayan plan sorguyu engeller |
 
-Hem **SAP/EclipseLink'in ürettiği JDBC SQL**, hem **GraphQL/JdbcTemplate SQL** gerçek JDBC çalıştırma sınırında kontrol edilir. PreparedStatement parametreleri aynı JDBC setter çağrılarıyla EXPLAIN'e aktarılır; SQL'e değer birleştirilmez. `EXPLAIN (FORMAT JSON, VERBOSE TRUE)` kullanılır, **ANALYZE kullanılmaz**. Plan ağacı alt sorgu/join dalları dahil dolaşılır. Index Scan, Index Only Scan ve Bitmap Index Scan bilgileri raporlanır. Küçük tablolardaki sequential scan'e izin verilir. Tablo büyüklüğü `pg_class.reltuples` istatistiğinden alınır; bilinmeyen istatistik ENFORCE'ta reddedilir. Seed sonrasında ANALYZE çalıştırılır.
+Hem **SAP/EclipseLink'in ürettiği JDBC SQL**, hem **GraphQL/Querydsl/EclipseLink SQL** gerçek JDBC çalıştırma sınırında kontrol edilir. PreparedStatement parametreleri aynı JDBC setter çağrılarıyla EXPLAIN'e aktarılır; SQL'e değer birleştirilmez. `EXPLAIN (FORMAT JSON, VERBOSE TRUE)` kullanılır, **ANALYZE kullanılmaz**. Plan ağacı alt sorgu/join dalları dahil dolaşılır. Index Scan, Index Only Scan ve Bitmap Index Scan bilgileri raporlanır. Küçük tablolardaki sequential scan'e izin verilir. Tablo büyüklüğü `pg_class.reltuples` istatistiğinden alınır; bilinmeyen istatistik ENFORCE'ta reddedilir. Seed sonrasında ANALYZE çalıştırılır.
 
 Bu politika “sorguda herhangi bir indeks geçtiyse kabul et” demez: bir join'de indeks kullanılırken başka büyük tablo full scan yapıyorsa reddedebilir. `count(*)` ve SAP sayfalamasının count sorguları da kontrol edilir. Geniş filtre, tüm kayıtları sayma veya uygun olmayan sıralama ENFORCE'ta reddedilebilir. Plan seçimi veriye/istatistiğe/PostgreSQL sürümüne bağlıdır; sabit indeks adı testi `RareGenre` gibi seçici bir veri üzerinde yapılır.
 

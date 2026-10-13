@@ -9,6 +9,7 @@ public class Movie {
  @Column(name="rating",nullable=false) private Double rating;
  @Column(name="genre",nullable=false,length=40) private String genre;
  @EdmIgnore @Column(name="director_id",insertable=false,updatable=false) private Long directorId;
+ @org.eclipse.persistence.annotations.JoinFetch(org.eclipse.persistence.annotations.JoinFetchType.OUTER)
  @ManyToOne(fetch=FetchType.EAGER) @JoinColumn(name="director_id",nullable=false) private Director director;
  protected Movie() {}
  public Long getId(){return id;} public String getTitle(){return title;} public Integer getYear(){return year;}

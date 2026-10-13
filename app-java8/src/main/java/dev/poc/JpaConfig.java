@@ -6,6 +6,7 @@ import org.springframework.context.annotation.*;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.EclipseLinkJpaVendorAdapter;
 import com.sap.olingo.jpa.processor.core.api.*;
+@org.springframework.data.jpa.repository.config.EnableJpaRepositories(basePackages="dev.poc", repositoryBaseClass=dev.poc.query.QueryRepositoryImpl.class)
 @Configuration
 public class JpaConfig {
  @Bean LocalContainerEntityManagerFactoryBean entityManagerFactory(DataSource ds) {
@@ -14,6 +15,7 @@ public class JpaConfig {
   f.setJpaPropertyMap(Compat.map("eclipselink.weaving","false","eclipselink.logging.level","WARNING",
    "eclipselink.cache.shared.default","false"));return f;
  }
+ @Bean org.springframework.orm.jpa.JpaTransactionManager transactionManager(EntityManagerFactory emf) { return new org.springframework.orm.jpa.JpaTransactionManager(emf); }
  @Bean JPAODataSessionContextAccess odataContext(EntityManagerFactory emf,ODataPaging pages) throws Exception {
   return JPAODataServiceContext.with().setPUnit("Movies").setEntityManagerFactory(emf)
    .setTypePackage("dev.poc.model").setRequestMappingPath("odata")

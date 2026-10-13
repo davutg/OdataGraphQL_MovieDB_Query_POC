@@ -6,7 +6,7 @@ import java.util.*;
 import javax.sql.DataSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.datasource.AbstractDataSource;
-/** Intercepts the actual JDBC SQL from both SAP/EclipseLink and GraphQL/JdbcTemplate. */
+/** Intercepts the actual JDBC SQL from both SAP/EclipseLink and GraphQL/Querydsl/JPA. */
 public class GuardedDataSource extends AbstractDataSource implements AutoCloseable {
  private final DataSource delegate;private final Limits limits;private final ObjectMapper json;
  private final PlanInspector inspector=new PlanInspector();

@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-13",
+  "scope": "Querydsl/JPA migration",
+  "jdbcBaselineBranch": "archive/jdbc-template",
+  "jdbcBaselineCommit": "401fd16",
+  "runtimes": [
+    {
+      "java": 8,
+      "coreContractChecks": 68,
+      "querydsl": "5.0.0",
+      "testJvm": "1.8.0_452",
+      "surefire": {
+        "tests": 47,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "failsafe": {
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "java": 17,
+      "coreContractChecks": 68,
+      "querydsl": "5.1.0",
+      "testJvm": "17.0.15",
+      "surefire": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "failsafe": {
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "java": 21,
+      "coreContractChecks": 68,
+      "querydsl": "5.1.0",
+      "testJvm": "21.0.7",
+      "surefire": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "failsafe": {
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "liveSmoke": [
+    {
+      "module": "app-java8",
+      "port": 8082,
+      "runtime": "1.8.0_504",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    },
+    {
+      "module": "app-java17",
+      "port": 8080,
+      "runtime": "17.0.20.1",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    },
+    {
+      "module": "app-java21",
+      "port": 8081,
+      "runtime": "21.0.12.1",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    }
+  ],
+  "liveAliasedRelationships": [
+    {
+      "port": 8082,
+      "aliasedDirectors": 10,
+      "sqlPlans": 1,
+      "status": "PASS"
+    },
+    {
+      "port": 8080,
+      "aliasedDirectors": 10,
+      "sqlPlans": 1,
+      "status": "PASS"
+    },
+    {
+      "port": 8081,
+      "aliasedDirectors": 10,
+      "sqlPlans": 1,
+      "status": "PASS"
+    }
+  ]
+}

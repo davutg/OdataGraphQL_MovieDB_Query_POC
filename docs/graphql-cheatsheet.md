@@ -57,7 +57,7 @@ query {
 | `rating` | `rating: 8.5` | Exact rating |
 | `ratingMin` / `ratingMax` | `ratingMin: 8, ratingMax: 9` | Inclusive rating bounds |
 
-Provided filters combine with **AND**. This schema has no general OR/NOT input or string functions. GraphQL itself does not prescribe filter operators: each service defines them. Orders allowed by policy are `ID`, `YEAR`, `RATING`, and `GENRE`. `TITLE` exists in the enum but policy rejects it. Default order is ascending ID. Other orders add ID as a stable tie-breaker.
+Provided non-null filters combine with **AND**. Empty strings are rejected with `FILTER_VALUE`; they are not treated as omitted filters. This schema has no general OR/NOT input or string functions. GraphQL itself does not prescribe filter operators: each service defines them. Orders allowed by policy are `ID`, `YEAR`, `RATING`, and `GENRE`. `TITLE` exists in the enum but policy rejects it. Default order is ascending ID. Other orders add ID as a stable tie-breaker.
 
 ### Named operation and variables
 
@@ -98,7 +98,7 @@ query {
 
 There is no OData-style `/Director` URL or `$expand`. The schema exposes `Movie.director` as a singular object. Its child fields are `id` and `name`. There is no `Director.movies` reverse collection or root `director` lookup in this POC.
 
-The resolver joins director data when requested, avoiding one query per movie. Scalar selection controls response fields, but the current SQL resolver still fetches all movie scalar columns. Requesting fewer fields therefore does not necessarily reduce database projection work.
+Spring Data Querydsl/JPA returns movie entities. EclipseLink eagerly fetches the singular director using an outer join, avoiding one query per movie. This entity fetch policy also joins the director when the response does not select it. Field selection controls the response, not an exact database projection; the resolver has no handwritten `nodes/director` selection-path check.
 
 ### Fragments reuse selections
 
@@ -185,9 +185,9 @@ query NextPage($cursor: String) {
 Start with `{"cursor": null}`. If `hasNextPage` is true, reuse the returned cursor with the same filter, order, and direction.
 
 - `first` is a total budget, default 100, maximum 500. Server pages contain at most 50 rows: 75 means at most 50 + 25.
-- A cursor binds offset, remaining budget, filter/order fingerprint, and expiry with an HMAC signature. It expires after five minutes by default.
+- A cursor binds offset, remaining budget, filter/order fingerprint, and expiry with an HMAC signature. It expires after five minutes by default. The fingerprint uses versioned canonical JSON with entity type, sorted non-null filter inputs, order and direction. Old JDBC-version cursors must be restarted after migration.
 - Continuation cannot enlarge remaining budget. Offsets are bounded at 10,000.
-- Add `totalCount` next to `nodes` only when required. It counts matching records independently of the row budget and executes another guarded SQL query.
+- Add `totalCount` next to `nodes` only when required. It counts matching records independently of the row budget through the repository and executes another guarded SQL query. `first: 0` skips entity fetching, but a selected count still executes.
 - Offset pagination does not guarantee a snapshot while data changes.
 
 ## Types, operations, and errors

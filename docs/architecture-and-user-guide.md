@@ -87,7 +87,7 @@ curl 'http://localhost:8080/graphql' \
   --data-binary '{"query":"query { movies(first: 10, filter: {genre: \"RareGenre\"}, orderBy: ID) { nodes { id title genre director { name } } pageInfo { hasNextPage endCursor } } }"}'
 ```
 
-The JSON envelope supports `query`, `variables`, and `operationName`. Movie filters include ID, genre, title, exact year/rating, year ranges, and rating ranges. Orders accepted by policy are `ID`, `YEAR`, `RATING`, and `GENRE`. Request `totalCount` only when you need it: it executes another guarded SQL query.
+The JSON envelope supports `query`, `variables`, and `operationName`. Movie filters include ID, genre, title, exact year/rating, year ranges, and rating ranges. Non-null filters combine with AND; empty strings are rejected rather than silently omitted. Orders accepted by policy are `ID`, `YEAR`, `RATING`, and `GENRE`. Request `totalCount` only when you need it: it executes another guarded SQL query.
 
 The custom `/graphql` endpoint is the public entry point. Introspection is disabled. The configured internal Spring GraphQL route is blocked by the request gate; use the supplied query UI and schema/examples rather than relying on that route.
 
@@ -226,8 +226,14 @@ flowchart BT
   Adapters --> DB
 ```
 
-The diagram shows layers of responsibility, not dependency imports: adapters depend on the core, while the core has no framework dependencies. OData uses SAP/Olingo and EclipseLink to produce SQL; GraphQL uses explicit parameterized SQL through `JdbcTemplate`. Both pass through the same guarded JDBC boundary, so generated SQL and explicit SQL receive the same plan decisions.
+The diagram shows layers of responsibility, not dependency imports: adapters depend on the core, while the core has no framework dependencies. OData uses SAP/Olingo and EclipseLink. GraphQL uses Spring Data repositories, Querydsl predicates and EclipseLink. Both reuse the JPA entity model and pass ORM-generated SQL through the same guarded JDBC boundary.
+
+The GraphQL connection adapter handles limits, signed cursors and paging once for reuse across entities. Movie-specific repository bindings define permitted filters and ranges. The schema remains explicit; this integration does not automatically expose every entity or property. The previous handwritten SQL approach is preserved on Git branch `archive/jdbc-template` at commit `401fd16`.
+
+GraphQL aliases, fragments and conditional selections affect the response normally. The ORM eagerly joins the singular director even when it is not selected, avoiding per-movie lookups at the cost of fetching that related data. A zero result budget skips the movie SELECT; requesting `totalCount` still performs a count. Existing cursor tokens must be restarted after the migration because the query fingerprint format changed.
 
 The query gate covers the OData and GraphQL routes. Static UI and capabilities/report routes are separate. Authentication, tenant authorization, distributed rate limiting, and shared OData paging storage are not implemented in this POC. Its local deployment binds published ports to localhost.
 
 For validation, `bash scripts/verify-matrix.sh` runs core, unit, and PostgreSQL integration checks on actual JDK 8, 17, and 21 containers. `python3 scripts/smoke-matrix.py` checks the three running services, including selective/rejected plans and 75-result pagination. Recorded results are documented in [Java versions](java-versions.md).
+
+For protocol selection and BFF tradeoffs, see [Choosing OData or GraphQL](choosing-odata-or-graphql.md). The [presentation](movie-query-poc-presentation.pptx) is a historical snapshot of the JDBC implementation; these guides describe the current Querydsl/JPA implementation.

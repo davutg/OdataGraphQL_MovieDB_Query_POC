@@ -3,6 +3,9 @@
  <parent><groupId>dev.poc</groupId><artifactId>movie-query-parent</artifactId><version>1.0.0</version><relativePath>../pom.xml</relativePath></parent>
  <artifactId>app-java17</artifactId>
  <dependencies>
+  <dependency><groupId>org.springframework.data</groupId><artifactId>spring-data-jpa</artifactId></dependency>
+  <dependency><groupId>com.querydsl</groupId><artifactId>querydsl-jpa</artifactId><version>5.1.0</version><classifier>jakarta</classifier></dependency>
+
   <dependency><groupId>dev.poc</groupId><artifactId>query-core</artifactId><version>${project.version}</version></dependency>
   <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
   <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-graphql</artifactId></dependency>
@@ -16,6 +19,10 @@
   <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
   <dependency><groupId>org.springframework.graphql</groupId><artifactId>spring-graphql-test</artifactId><scope>test</scope></dependency>
  </dependencies>
- <build><finalName>movie-query-poc-1.0.0</finalName><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
+ <build><finalName>movie-query-poc-1.0.0</finalName><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><annotationProcessorPaths>
+ <path><groupId>com.querydsl</groupId><artifactId>querydsl-apt</artifactId><version>5.1.0</version><classifier>jakarta</classifier></path>
+ <path><groupId>jakarta.persistence</groupId><artifactId>jakarta.persistence-api</artifactId><version>3.1.0</version></path>
+ <path><groupId>javax.annotation</groupId><artifactId>javax.annotation-api</artifactId><version>1.3.2</version></path>
+ </annotationProcessorPaths></configuration></plugin><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
 <profiles><profile><id>integration</id><build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions></plugin></plugins></build></profile></profiles>
 </project>
