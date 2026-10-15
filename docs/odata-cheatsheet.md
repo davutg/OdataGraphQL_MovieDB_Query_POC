@@ -110,7 +110,7 @@ The default maximum is 2. The actual model has one relationship hop. Filter pare
 
 - `$top` is the total row budget, default 100 and maximum 500. Server pages contain at most 50 rows. `$top=75` therefore yields at most 50 + 25.
 - Follow `@odata.nextLink` **exactly**. A continuation uses `$skiptoken` alone. Preserve quoted tokens returned by the Java 8 adapter.
-- OData tokens expire after five minutes and live in process memory. Restart or eviction requires a new query.
+- OData tokens expire after five minutes by default (`CURSOR_TTL_MS`). They are self-contained and signed: replicas and restarts can validate them with the same configured key.
 - `$skip` and continuation offsets cannot exceed 10,000. Offset pagination does not preserve a snapshot during concurrent data changes.
 - `X-Index-Policy: OFF | AUDIT | ENFORCE` selects plan behavior when the server permits selection. ENFORCE rejects expensive/unverifiable plans and large-table sequential scans.
 - Counts receive plan checks, including OData's internal paging count even without `$count=true`.
@@ -128,3 +128,7 @@ curl --get 'http://localhost:8080/odata/Movies' \
 **Outside the POC:** writes, `$batch`, `$apply`, functions such as `contains`, lambda `any/all`, navigation filters, and recursive expansions. OData standardization does not mean every service enables every feature.
 
 For active limits use `/api/capabilities`. For plan reasons use `X-Request-Id` with `/api/requests/{id}`. See [configuration guide](architecture-and-user-guide.md).
+
+## Multiple pods
+
+Both protocols use signed, self-contained continuation tokens. With the `cluster` profile, a shared signing key and database, paging and request reports work across replicas without sticky sessions. See [deployment settings](multi-pod-deployment.md).

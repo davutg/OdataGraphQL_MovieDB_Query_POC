@@ -1,0 +1,144 @@
+{
+  "date": "2026-10-15",
+  "matrix": [
+    {
+      "java": 8,
+      "coreContractChecks": 68,
+      "surefire": {
+        "tests": 53,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "failsafe": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "java": 17,
+      "coreContractChecks": 68,
+      "surefire": {
+        "tests": 49,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "failsafe": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "java": 21,
+      "coreContractChecks": 68,
+      "surefire": {
+        "tests": 49,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "failsafe": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "liveCluster": [
+    {
+      "source": 8082,
+      "destination": 8080,
+      "checks": [
+        "odata-50-plus-25",
+        "graphql-50-plus-25",
+        "shared-report"
+      ],
+      "status": "PASS"
+    },
+    {
+      "source": 8080,
+      "destination": 8081,
+      "checks": [
+        "odata-50-plus-25",
+        "graphql-50-plus-25",
+        "shared-report"
+      ],
+      "status": "PASS"
+    },
+    {
+      "source": 8081,
+      "destination": 8082,
+      "checks": [
+        "odata-50-plus-25",
+        "graphql-50-plus-25",
+        "shared-report"
+      ],
+      "status": "PASS"
+    },
+    {
+      "checks": [
+        "tampering-rejected",
+        "budget-override-rejected"
+      ],
+      "status": "PASS"
+    },
+    {
+      "checks": [
+        "odata-survives-restart",
+        "graphql-survives-restart",
+        "report-survives-restart"
+      ],
+      "status": "PASS"
+    }
+  ],
+  "liveRegression": [
+    {
+      "module": "app-java8",
+      "port": 8082,
+      "runtime": "1.8.0_504",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    },
+    {
+      "module": "app-java17",
+      "port": 8080,
+      "runtime": "17.0.20.1",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    },
+    {
+      "module": "app-java21",
+      "port": 8081,
+      "runtime": "21.0.12.1",
+      "checks": [
+        "odata-selective-index",
+        "odata-enforce-rejection",
+        "odata-50-plus-25",
+        "graphql-selective-index",
+        "graphql-enforce-rejection",
+        "graphql-50-plus-25"
+      ],
+      "status": "PASS"
+    }
+  ]
+}

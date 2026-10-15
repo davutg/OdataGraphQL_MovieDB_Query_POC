@@ -19,6 +19,7 @@ JDBC sürümü `archive/jdbc-template` dalında (`401fd16`) saklanır.
 Üç sürümü birlikte çalıştırın:
 
 ```bash
+bash scripts/init-local-env.sh
 docker compose --profile variants up -d --build --wait
 ```
 
@@ -40,6 +41,7 @@ Ayrıntılar: [docs/java-versions.md](docs/java-versions.md).
 **Docker Desktop / OrbStack + Docker Compose**:
 
 ```bash
+bash scripts/init-local-env.sh
 docker compose up --build
 ```
 
@@ -126,7 +128,7 @@ OData property adları **Id, Title, Year, Rating, Genre, Director**; GraphQL adl
 
 Bu veri modelinde yalnızca `Movie → Director` tekil ilişkisi açılır. Koleksiyon expand ve recursive navigasyon yayımlanmaz; bu nedenle meşru sorgulardaki gerçek ilişki derinliği 1'dir. Derinlik limiti 2 olsa da sırf bunu göstermek için sınırsız ters ilişki eklenmemiştir. GraphQL şemasında rekürsif ilişki yoktur.
 
-Sayfalama için `$top`/`first` **ilk isteğin toplam sonuç bütçesidir**. Örneğin 75 → 50 + 25. Sonraki sayfa bu bütçeyi büyütemez. OData nextLink aynen kullanılmalı; başka filtrelerle birleştirilemez. GraphQL `after` aynı filtre ve sıralamayla kullanılmalı. Varsayılan cursor/token ömrü 5 dakika. OData tokenları süreç belleğindedir ve yeniden başlatılınca geçersiz olur. GraphQL cursorları varsayılan rastgele anahtarla aynı davranışı gösterir; CURSOR_SECRET_BASE64 ile en az 32 baytlık sabit bir anahtar verilirse restart ve birden fazla instance arasında korunur. CURSOR_TTL_MS GraphQL cursor süresini belirler. Id ikinci sıralama anahtarı olarak eklenir. Offset sayfalaması eşzamanlı veri değişikliklerinde snapshot garantisi vermez.
+Sayfalama için `$top`/`first` **ilk isteğin toplam sonuç bütçesidir**. Örneğin 75 → 50 + 25. Sonraki sayfa bu bütçeyi büyütemez. OData nextLink aynen kullanılmalı; başka filtrelerle birleştirilemez. GraphQL `after` aynı filtre ve sıralamayla kullanılmalı. Varsayılan cursor/token ömrü 5 dakika. Her iki protokol imzalı, bağımsız continuation tokenları kullanır; pod belleğinde cursor saklanmaz. Compose `cluster` profili ile çalışır: ortak `CURSOR_SECRET_BASE64` zorunludur, rate limit ve istek raporları PostgreSQL üzerinde paylaşılır. İlk çalıştırmada `bash scripts/init-local-env.sh` kullanın. `CURSOR_TTL_MS` iki protokolün token süresini belirler. Ayrıntılar: [Multi-pod deployment](docs/multi-pod-deployment.md). Id ikinci sıralama anahtarı olarak eklenir. Offset sayfalaması eşzamanlı veri değişikliklerinde snapshot garantisi vermez.
 
 ## Opsiyonel index policy preprocessor
 
@@ -149,7 +151,7 @@ Hem **SAP/EclipseLink'in ürettiği JDBC SQL**, hem **GraphQL/Querydsl/EclipseLi
 
 Bu politika “sorguda herhangi bir indeks geçtiyse kabul et” demez: bir join'de indeks kullanılırken başka büyük tablo full scan yapıyorsa reddedebilir. `count(*)` ve SAP sayfalamasının count sorguları da kontrol edilir. Geniş filtre, tüm kayıtları sayma veya uygun olmayan sıralama ENFORCE'ta reddedilebilir. Plan seçimi veriye/istatistiğe/PostgreSQL sürümüne bağlıdır; sabit indeks adı testi `RareGenre` gibi seçici bir veri üzerinde yapılır.
 
-Raporlar GraphQL `extensions.indexPolicy` içinde ve her iki API için `X-Request-Id` ile `/api/requests/{id}` üzerinden görülebilir. Son 200 rapor bellekte tutulur. SQL metni ve parametre değerleri rapora eklenmez.
+Raporlar GraphQL `extensions.indexPolicy` içinde ve her iki API için `X-Request-Id` ile `/api/requests/{id}` üzerinden görülebilir. Cluster profilinde raporlar PostgreSQL üzerinde 5 dakika tutulur ve tüm podlardan okunabilir; bağımsız geliştirme modunda son 200 rapor bellekte tutulur. SQL metni ve parametre değerleri rapora eklenmez.
 
 **Operasyonel sınır:** EXPLAIN tahmini plan kontrolüdür; çalıştırılmış planı kanıtlamaz. PostgreSQL `prepareThreshold=0` ile server-side generic prepared plan farkı azaltılır. İstatistik değişimi, eşzamanlı DDL, farklı session ayarları veya plan değişimi yine mümkündür. Kontrol SQL'i çalıştırır ve planlama maliyeti ekler; bu nedenle opsiyoneldir. `enable_seqscan=off` gibi indeks zorlaması yapılmaz.
 

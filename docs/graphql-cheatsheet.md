@@ -205,3 +205,7 @@ Start with `{"cursor": null}`. If `hasNextPage` is true, reuse the returned curs
 Inspect both HTTP status and the JSON `errors` array. GraphQL can return HTTP 200 with errors, potentially alongside partial data. Policy details may appear in `errors[].extensions.code`. Plan reports appear in response `extensions` and through `X-Request-Id` at `/api/requests/{id}`.
 
 The shared defaults include a 3-second database statement cap, 5-second worker timeout, and OFF/AUDIT/ENFORCE plan modes. GraphQL selection flexibility does not replace database safeguards. See [configuration guide](architecture-and-user-guide.md) and the [OData cheatsheet](odata-cheatsheet.md).
+
+## Multiple pods
+
+Both protocols use signed, self-contained continuation tokens. With the `cluster` profile, a shared signing key and database, paging and request reports work across replicas without sticky sessions. See [deployment settings](multi-pod-deployment.md).

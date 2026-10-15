@@ -26,7 +26,9 @@ public class ODataPolicy {
   req.getParameterMap().forEach((k,v)->{if(!OPTIONS.contains(k)||v.length!=1)fail("Unknown or repeated option: "+k);params.put(k,v[0]);});
   if(params.containsKey("$skiptoken")) {
    if(params.size()!=1)fail("Continuation token must be used alone");
-   if(!params.get("$skiptoken").matches("(?:[a-f0-9-]{36}|'[a-f0-9-]{36}')"))fail("Invalid continuation token");
+   if(!path.equals("/odata/Movies"))fail("Continuation is only valid on Movies");
+   String token=params.get("$skiptoken");
+   if(token.length()>dev.poc.core.ODataCursorCodec.MAX_TOKEN_LENGTH+2 || !(token.matches("od1\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+") || token.matches("'od1\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+'")))fail("Invalid continuation token");
    return req;
   }
   boolean collection=path.equals("/odata/Movies");

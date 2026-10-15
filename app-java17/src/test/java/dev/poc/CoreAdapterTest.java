@@ -23,11 +23,11 @@ class CoreAdapterTest {
  @Test void configuredKeySurvivesIndependentInstances(){
   byte[] key=new byte[32];java.util.Arrays.fill(key,(byte)42);
   String encoded=java.util.Base64.getEncoder().encodeToString(key);
-  CursorCodec first=new CoreConfig().cursors(encoded,300000),second=new CoreConfig().cursors(encoded,300000);
+  CursorCodec first=new CoreConfig().cursors(new CoreConfig().cursorSigningKey(encoded,true),300000),second=new CoreConfig().cursors(new CoreConfig().cursorSigningKey(encoded,true),300000);
   String fingerprint=first.fingerprint("same query");
   assertThat(second.decode(first.encode(50,25,fingerprint),fingerprint).remaining()).isEqualTo(25);
  }
- @Test void invalidConfiguredKeyFailsAtStartup(){assertThatThrownBy(()->new CoreConfig().cursors("AA==",300000)).isInstanceOf(IllegalArgumentException.class);}
+ @Test void invalidConfiguredKeyFailsAtStartup(){assertThatThrownBy(()->new CoreConfig().cursorSigningKey("AA==",true)).isInstanceOf(IllegalArgumentException.class);}
  @Test void preferredPageRetainsRemainingBudget(){
   var page=CoreConfig.policy(TestLimits.defaults()).page(75,0,10);
   assertThat(page.size()).isEqualTo(10);assertThat(page.remaining(10)).isEqualTo(65);assertThat(page.nextOffset(10)).isEqualTo(10);

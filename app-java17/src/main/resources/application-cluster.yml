@@ -1,0 +1,3 @@
+poc:
+  require-stable-cursor-key: true
+  shared-state: true

@@ -18,6 +18,9 @@ spring:
 server:
   port: ${PORT:8080}
 poc:
+  require-stable-cursor-key: ${REQUIRE_STABLE_CURSOR_KEY:false}
+  shared-state: ${SHARED_REQUEST_STATE:false}
+  state-namespace: ${STATE_NAMESPACE:movie-query}
   cursor-secret-base64: ${CURSOR_SECRET_BASE64:}
   cursor-ttl-ms: ${CURSOR_TTL_MS:300000}
   default-top: 100

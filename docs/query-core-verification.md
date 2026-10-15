@@ -1,5 +1,8 @@
 # Shared query core — stage 1 complete
 
+> Historical verification snapshot. For the current shared-key and stateless continuation deployment, see [multi-pod deployment](multi-pod-deployment.md).
+
+
 Standalone Java 8-targeted module without external runtime dependencies. No Spring,
 Jakarta, servlet, GraphQL, SAP, JSON or JDBC types enter the public contract.
 

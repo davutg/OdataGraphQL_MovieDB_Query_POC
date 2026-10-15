@@ -23,6 +23,8 @@ services:
     environment:
       DB_URL: jdbc:postgresql://db:5432/movies?prepareThreshold=0
       DB_USER: movies
+      SPRING_PROFILES_ACTIVE: cluster
+      CURSOR_SECRET_BASE64: ${CURSOR_SECRET_BASE64:-}
       DB_PASSWORD: movies_dev_only
     healthcheck: *app-healthcheck
     ports: ["127.0.0.1:8080:8080"]
@@ -42,6 +44,8 @@ services:
     environment:
       DB_URL: jdbc:postgresql://db:5432/movies?prepareThreshold=0
       DB_USER: movies
+      SPRING_PROFILES_ACTIVE: cluster
+      CURSOR_SECRET_BASE64: ${CURSOR_SECRET_BASE64:-}
       DB_PASSWORD: movies_dev_only
     healthcheck: *app-healthcheck
     ports: ["127.0.0.1:8082:8080"]
@@ -61,6 +65,8 @@ services:
     environment:
       DB_URL: jdbc:postgresql://db:5432/movies?prepareThreshold=0
       DB_USER: movies
+      SPRING_PROFILES_ACTIVE: cluster
+      CURSOR_SECRET_BASE64: ${CURSOR_SECRET_BASE64:-}
       DB_PASSWORD: movies_dev_only
     healthcheck: *app-healthcheck
     ports: ["127.0.0.1:8081:8080"]

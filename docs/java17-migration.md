@@ -1,5 +1,8 @@
 # Java 17 migration — 2026-10-05
 
+> Historical verification snapshot. For the current shared-key and stateless continuation deployment, see [multi-pod deployment](multi-pod-deployment.md).
+
+
 Stage 2 implementation and full reactor/PostgreSQL validation are complete.
 See the local Mac verification below; historical session details remain for provenance.
 

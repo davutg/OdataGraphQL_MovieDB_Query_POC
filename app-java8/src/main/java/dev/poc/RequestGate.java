@@ -13,6 +13,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Synchronous HTTP budget with bounded workers, buffered responses and a database-side deadline. */
 @Component
 public class RequestGate extends OncePerRequestFilter {
+ private SharedRequestStore sharedStore;
+ @org.springframework.beans.factory.annotation.Autowired(required=false)
+ void sharedStore(SharedRequestStore store){this.sharedStore=store;}
  private final Limits limits;private final ObjectMapper json;
  private final ThreadPoolExecutor workers;
  private final Map<String,Window> rates=new HashMap<>();
@@ -23,12 +26,19 @@ public class RequestGate extends OncePerRequestFilter {
    new SynchronousQueue<>(),r->{Thread t=new Thread(r,"query-worker");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
  }
  @PreDestroy void close(){workers.shutdownNow();}
- public synchronized Map<String,Object> trace(String id){return traces.get(id);}
+ public synchronized Map<String,Object> trace(String id){return sharedStore==null?traces.get(id):sharedStore.trace(id);}
  private synchronized void save(RequestState state) {
+  if(sharedStore!=null) {
+   Map<String,Object> report=new LinkedHashMap<String,Object>();
+   report.put("requestId",state.id);report.put("mode",state.mode);
+   synchronized(state.plans){report.put("plans",new ArrayList<Map<String,Object>>(state.plans));}
+   sharedStore.save(report);return;
+  }
   if(traces.size()>=200)traces.remove(traces.keySet().iterator().next());
   traces.put(state.id,Compat.map("requestId",state.id,"mode",state.mode,"plans",Compat.copy(state.plans)));
  }
  private synchronized boolean permit(String key) {
+  if(sharedStore!=null)return sharedStore.permit(key,limits.ratePerMinute());
   long now=System.currentTimeMillis();rates.entrySet().removeIf(e->now-e.getValue().start>=60000);
   if(rates.size()>=10000 && !rates.containsKey(key))return false;
   Window old=rates.getOrDefault(key,new Window(now,0));
@@ -43,7 +53,7 @@ public class RequestGate extends OncePerRequestFilter {
   if((req.getRequestURI().startsWith("/odata")&&!method.equals("GET")) || (req.getRequestURI().equals("/graphql")&&!method.equals("POST"))) {
    error(res,405,"READ_ONLY","Only GET OData and POST GraphQL are supported");return;
   }
-  if(req.getQueryString()!=null && req.getQueryString().length()>8192){error(res,413,"QUERY_SIZE","Query string too large");return;}
+  if(req.getQueryString()!=null && req.getQueryString().length()>(req.getRequestURI().startsWith("/odata") && req.getParameter("$skiptoken")!=null ? 32768 : 8192)){error(res,413,"QUERY_SIZE","Query string too large");return;}
   HttpServletRequest safe=req;
   if(method.equals("POST")) {
    byte[] body=readBounded(req.getInputStream(),32769);

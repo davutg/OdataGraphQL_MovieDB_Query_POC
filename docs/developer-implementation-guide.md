@@ -137,9 +137,9 @@ After validation, a normalized request wrapper supplies query text and parameter
 
 For a first page, `ODataPaging` asks SAP's count query for the total. It computes the available budget from top and total-minus-skip, and caps page size through core policy. Count SQL therefore passes through index inspection even without a count in the response.
 
-Continuation state is a synchronized, insertion-ordered map of opaque UUID tokens to saved `JPAODataPage`, remaining budget, and expiry. It has 1,000 entries, expires tokens after five minutes, and evicts old entries when full. Saved URI information binds the continuation to the original query. Following a token produces the next saved page and a new token if budget/data remain. Tokens are replayable until expiry or eviction; fetching does not consume them.
+`ODataCursorCodec` encodes validated query options, next offset, remaining budget, page size and expiry into a versioned, HMAC-signed token. `ODataContinuation` verifies its signature and expiry, restores the request parameters, and runs `ODataPolicy` again before SAP parses them. SAP then processes an ordinary first-page request at the restored offset. No `UriInfo`, entity manager or continuation map survives the HTTP request. Tokens are replayable until expiry; they are signed, not encrypted.
 
-Unlike GraphQL, OData continuation is process-local and its TTL is fixed in code. Java 8 supports SAP 1.1.1's quoted UUID links and nullable paging API; modern SAP uses its newer return contracts. The Java 8 entities also use public constructors required by that older metadata reflection path.
+Both codecs use the same configured key and TTL. The `cluster` profile requires that key; it never generates a replacement silently. Java 8 supports SAP's quoted links and nullable paging API; modern SAP uses its newer return contracts. The Java 8 entities also use public constructors required by its older metadata reflection path.
 
 ## 6. GraphQL evaluation and Querydsl/JPA integration
 
@@ -256,7 +256,7 @@ Sources: [RequestGate](../app-java17/src/main/java/dev/poc/RequestGate.java), [R
 
 `RequestGate` applies to OData paths, `/graphql`, and the blocked internal GraphQL path. Static UI, capabilities, and report endpoints do not use this query worker/rate gate.
 
-The gate checks the internal-route prohibition, per-address rate limit, allowed method, URL query length, POST body size, and requested index mode. Limits include 8,192 URL-query characters and 32 KiB POST bodies. The rate limiter uses `getRemoteAddr()`, fixed 60-second windows starting on the address's first request, and at most 10,000 address entries. Expired windows are purged during admission; forwarded proxy headers are not used as the client key.
+The gate checks the internal-route prohibition, per-address rate limit, allowed method, URL query length, POST body size, and requested index mode. Limits include 8,192 ordinary URL-query characters, 32,768 continuation-query characters, and 32 KiB POST bodies. Tokens are capped at 24,000 characters; connector/ingress URL limits can be lower. The rate limiter uses `getRemoteAddr()` and fixed 60-second windows. In cluster mode, `SharedRequestStore` atomically admits requests using PostgreSQL `INSERT ... ON CONFLICT ... WHERE ... RETURNING`, keyed by service namespace and address, with database time. Standalone mode keeps at most 10,000 local address entries. Forwarded proxy headers are not used as the client key.
 
 After admission, `RequestState` carries UUID request ID, effective mode, monotonic deadline, synchronized plan list, and a volatile policy violation. The worker installs it in a thread-local, runs the servlet chain, and removes it in `finally`.
 
@@ -266,7 +266,7 @@ The caller waits on the worker future with the configured request timeout. Expir
 
 At the JDBC boundary, remaining request time is compared with `dbTimeoutMs`; the smaller positive duration is applied through PostgreSQL `set_config('statement_timeout', ..., false)`. An exhausted budget raises a timeout SQL exception. This bounds individual statements as the request progresses.
 
-Completed/timed-out reports are copied into a process-local insertion-ordered store of the latest 200 requests. Reports include request ID, mode, costs, scans, accepted flags, and reasons. SQL and parameter values are omitted. Early rejections and worker-admission failures need not have a stored trace.
+In cluster mode, completed/timed-out reports are copied into PostgreSQL JSONB records with a five-minute TTL. Any replica can retrieve them. Indexed expiry cleanup runs during admission. Standalone development mode retains the latest 200 reports locally. Reports include request ID, mode, costs, scans, accepted flags, and reasons. SQL and parameter values are omitted. Early rejections and worker-admission failures need not have a stored trace.
 
 Error transport depends on the layer. Gate failures use HTTP status codes such as 422, 429, 503, or 504. SAP may produce its own OData envelope/status. GraphQL validation/resolver errors can be returned in `errors` with HTTP 200. Modern exception handling uses a GraphQL exception handler; Java 8 uses a `DataFetcherExceptionResolverAdapter`. Consumers must inspect both status and protocol body.
 
@@ -282,7 +282,7 @@ Java 8 shares these UI/schema/migration resources while retaining its own applic
 
 When adding a field, update the database/JPA model and GraphQL schema, protocol normalization, repository bindings, core allow-lists and UI options as appropriate. Querydsl annotation processing regenerates typed paths. Decide filtering and ordering separately. For another entity, reuse `QueryRepository` and `QuerydslConnection`, while explicitly defining its API and policy mappings. When adding relationships, revisit expand grammar, structural depth, complexity estimates, ORM fetching and count behavior. Adding an enum entry alone does not grant permission.
 
-New asynchronous work must carry request state explicitly. New SQL execution styles must stay inside the guarded data source and have interception coverage. New public routes require an explicit decision about request gating. A multi-instance deployment would require shared OData continuation/rate/report stores if consistent cross-instance behavior is needed; a shared GraphQL signing key only solves cursor verification.
+New asynchronous work must carry request state explicitly. New SQL execution styles must stay inside the guarded data source and have interception coverage. New public routes require an explicit decision about request gating. For multiple replicas, use the `cluster` profile, a shared signing key, the same database and state namespace. Both continuations are stateless; rate/report state is external. Worker concurrency remains per pod. See [multi-pod deployment](multi-pod-deployment.md).
 
 Verification layers serve different purposes:
 

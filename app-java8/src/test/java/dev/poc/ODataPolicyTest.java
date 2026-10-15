@@ -22,8 +22,8 @@ class ODataPolicyTest {
  @Test void acceptsBoundedToOneExpand(){MockHttpServletRequest r=req();r.addParameter("$expand","Director($select=Id,Name)");assertThat(policy.validate(r).getParameter("$expand")).isEqualTo("Director($select=Id,Name)");}
  @Test void rejectsRecursiveExpand(){MockHttpServletRequest r=req();r.addParameter("$expand","Director($expand=Movies($expand=Director))");assertThatThrownBy(()->policy.validate(r)).hasMessageContaining("depth");}
  @Test void rejectsExpandWildcard(){MockHttpServletRequest r=req();r.addParameter("$expand","*");assertThatThrownBy(()->policy.validate(r)).isInstanceOf(PolicyException.class);}
- @Test void continuationCannotChangeQuery(){MockHttpServletRequest r=req();r.addParameter("$skiptoken","e74728af-6020-46bc-b8cd-a8fe3fef15b2");r.addParameter("$filter","Year gt 2000");assertThatThrownBy(()->policy.validate(r)).hasMessageContaining("alone");}
+ @Test void continuationCannotChangeQuery(){MockHttpServletRequest r=req();r.addParameter("$skiptoken","od1.cGF5bG9hZA.c2lnbmF0dXJl");r.addParameter("$filter","Year gt 2000");assertThatThrownBy(()->policy.validate(r)).hasMessageContaining("alone");}
  @Test void filterComplexityIsBounded(){String filter=java.util.stream.IntStream.range(0,40).mapToObj(n->"Year ge 2000").collect(java.util.stream.Collectors.joining(" and "));assertThatThrownBy(()->policy.filter(filter)).isInstanceOf(PolicyException.class);}
- @Test void permitsLegacyQuotedContinuationToken(){MockHttpServletRequest r=req();r.addParameter("$skiptoken","'e74728af-6020-46bc-b8cd-a8fe3fef15b2'");assertThat(policy.validate(r).getParameter("$skiptoken")).isEqualTo("'e74728af-6020-46bc-b8cd-a8fe3fef15b2'");}
+ @Test void permitsQuotedSignedTokenSyntax(){MockHttpServletRequest r=req();r.addParameter("$skiptoken","'od1.cGF5bG9hZA.c2lnbmF0dXJl'");assertThat(policy.validate(r).getParameter("$skiptoken")).isEqualTo("'od1.cGF5bG9hZA.c2lnbmF0dXJl'");}
  @Test void rejectsMalformedQuotedContinuationToken(){MockHttpServletRequest r=req();r.addParameter("$skiptoken","'not-a-token'");assertThatThrownBy(()->policy.validate(r)).isInstanceOf(PolicyException.class);}
 }

@@ -41,12 +41,14 @@ From the project directory:
 
 ```bash
 # Build and start all three JVM variants plus the shared database.
+bash scripts/init-local-env.sh
 docker compose --profile variants up -d --build --wait
 
 # Preserve movie data while stopping all three applications and the DB.
 docker compose --profile variants stop
 
 # Default Java 17 service only.
+bash scripts/init-local-env.sh
 docker compose up -d --build --wait
 ```
 

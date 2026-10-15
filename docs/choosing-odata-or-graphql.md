@@ -79,14 +79,15 @@ For a BFF, keep business rules in reusable services and use the API layer to com
 
 **OData does not inherently require an in-memory user session.** Its server-driven paging contract returns a next link that clients follow without interpreting or reconstructing it. The specification does not mandate our particular token store. ETags concern resource versions and conditional operations; they are not proof of a conversational session. [OASIS protocol: server-driven paging and HTTP headers](https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html).
 
-There is, however, a concrete state limitation in this POC:
+The earlier POC stored OData continuation in process memory. That was an implementation choice, and has now been removed:
 
-| POC continuation mechanism | Operational consequence |
+| POC mechanism | Multi-pod behavior |
 |---|---|
-| OData: UUID tokens refer to an in-process map; entries expire after five minutes and the store is capped at 1,000 | A restart, eviction or request reaching another independent instance can invalidate continuation. |
-| GraphQL: signed cursor includes offset, remaining budget, query fingerprint and expiry | No token lookup is required, but instances need compatible validation and the same signing secret. A randomly generated startup secret invalidates earlier cursors after restart. |
+| OData: signed token carries validated query options, offset, remaining budget, page size and expiry | Any compatible replica with the shared key can continue the query. No token lookup or sticky session. |
+| GraphQL: signed cursor carries offset, remaining budget, query fingerprint and expiry | Any compatible replica with the shared key can validate the cursor against the submitted query. |
+| Cluster rate limits and request reports | Stored in the existing PostgreSQL database and shared across replicas. |
 
-These are implementation choices visible in [ODataPaging](../app-java17/src/main/java/dev/poc/ODataPaging.java), [CursorCodec](../query-core/src/main/java/dev/poc/core/CursorCodec.java) and [CoreConfig](../app-java17/src/main/java/dev/poc/CoreConfig.java). A shared continuation store or a suitable self-contained token design could change the OData deployment behavior. GraphQL could equally be implemented with stored cursors.
+Compose enables the `cluster` profile, which requires a shared signing key. Standalone development mode permits a temporary key and local rate/report stores. Follow [multi-pod deployment](multi-pod-deployment.md) for deployment settings. Neither protocol requires sticky sessions; application configuration determines this property.
 
 Neither token design creates a database snapshot. Both POC flows use offsets, so concurrent changes can move records between pages. A signed cursor is tamper-resistant; it is not automatically keyset pagination or repeatable-read consistency. Cursor and connection patterns are API design choices. [GraphQL pagination guidance](https://graphql.org/learn/pagination/).
 

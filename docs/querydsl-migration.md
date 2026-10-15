@@ -66,6 +66,7 @@ Run:
 
 ```bash
 bash scripts/verify-matrix.sh
+bash scripts/init-local-env.sh
 docker compose --profile variants up -d --build --wait
 python3 scripts/smoke-matrix.py
 ```

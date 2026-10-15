@@ -16,6 +16,7 @@ Run these commands from the repository directory. Docker Compose works with OrbS
 
 ```bash
 cd /Users/davutgurbuz/Documents/Codex/movie-query-poc
+bash scripts/init-local-env.sh
 docker compose --profile variants up -d --build --wait
 ```
 
@@ -30,6 +31,7 @@ All three use the same database, core rules, schema, and UI. The UI reports the 
 For Java 17 alone:
 
 ```bash
+bash scripts/init-local-env.sh
 docker compose up -d --build --wait
 ```
 
@@ -97,7 +99,7 @@ See [OData examples](queries.http) and [GraphQL examples](graphql-examples.graph
 
 `$top` and `first` are a **total result budget**, not a request to increase the server page size. With defaults, a budget of 75 produces at most 50 rows followed by at most 25. An omitted budget defaults to 100. A budget of zero is valid and returns no movie rows, although count work can still occur.
 
-For OData, follow the returned `@odata.nextLink` exactly. Do not add a new filter, order, or larger budget. Its opaque token identifies saved paging state in the application process. Java 8 may return a quoted token in the link; preserve the link as provided.
+For OData, follow the returned `@odata.nextLink` exactly. Do not add a new filter, order, or larger budget. Its signed token carries the validated query options, offset, remaining budget, page size, and expiry. Java 8 may return a quoted token in the link; preserve the link as provided.
 
 For GraphQL, read `pageInfo.endCursor` and submit it as `after`, with the same filter, order, and direction. You can keep `first: 75` in the example above: the cursor limits the remaining budget to 25. A smaller `first` can reduce the continuation budget; a larger value cannot enlarge it.
 
@@ -105,10 +107,10 @@ Ordering is deterministic because ID is added as a tie-breaker when needed. Pagi
 
 | Continuation | State and lifetime |
 |---|---|
-| OData | Process-local saved query state, maximum 1,000 entries, fixed five-minute token lifetime. Restart or eviction invalidates tokens. |
-| GraphQL | HMAC-signed cursor containing offset, remaining budget, query fingerprint, and expiry. Default five-minute lifetime; a fresh random signing key is generated on startup unless configured. |
+| OData | Self-contained HMAC-signed query state. Five-minute default lifetime, configurable with `CURSOR_TTL_MS`. No token store or pod affinity. |
+| GraphQL | HMAC-signed cursor containing offset, remaining budget, query fingerprint, and expiry. Default five-minute lifetime. Cluster mode requires a shared signing key. |
 
-A stable GraphQL signing key allows compatible instances/restarts to validate cursors. It does not make OData tokens, request reports, or rate limits shared between instances. Both protocols issue fresh expiry times when creating subsequent continuation tokens.
+A shared signing key allows compatible instances/restarts to validate both protocols’ cursors. Compose enables `cluster`: PostgreSQL shares rate counters and request reports. See [multi-pod deployment](multi-pod-deployment.md). Both protocols issue fresh expiry times when creating subsequent continuation tokens.
 
 ## 6. Choose an index policy
 
@@ -151,8 +153,8 @@ Configuration is bound and validated at startup. Restart/recreate applications a
 | `poc.index-policy.allow-client-selection` | true | `INDEX_POLICY_CLIENT_SELECTION` |
 | `poc.index-policy.min-table-rows` | 10000 | `INDEX_POLICY_MIN_ROWS` |
 | `poc.index-policy.max-plan-cost` | 100000 | `INDEX_POLICY_MAX_COST` |
-| GraphQL cursor signing key | Random on startup | `CURSOR_SECRET_BASE64` |
-| GraphQL cursor lifetime | 300000 ms | `CURSOR_TTL_MS` |
+| Shared OData/GraphQL signing key | Required in cluster; random in standalone development | `CURSOR_SECRET_BASE64` |
+| OData/GraphQL cursor lifetime | 300000 ms | `CURSOR_TTL_MS` |
 
 The explicit short environment names come from YAML placeholders; the `POC_*` names use Spring's environment-property binding (replace dots with underscores, remove hyphens, and uppercase). A local JAR also accepts arguments such as `--poc.page-size=25`.
 
@@ -164,7 +166,7 @@ To generate a stable key:
 openssl rand -base64 32
 ```
 
-Pass the result through configuration. `CURSOR_TTL_MS` affects GraphQL only; OData currently has a fixed lifetime. Field allow-lists and body/filter syntax limits are defined in code, not configurable YAML lists.
+Pass the result through configuration. `CURSOR_TTL_MS` applies to both protocols. Field allow-lists and body/filter syntax limits are defined in code, not configurable YAML lists.
 
 ### Docker configuration example
 
@@ -195,7 +197,7 @@ The override merges with the existing database environment entries. Each contain
 
 `GET /api/capabilities` reports limits, allow-lists, policy settings, and runtime information. The UI uses it to show current settings and disable client mode selection when prohibited.
 
-Gated requests normally receive `X-Request-Id`. Retrieve their report with `GET /api/requests/{id}`. GraphQL also includes request and index-policy information in `extensions`. Reports contain plan costs, scan descriptions, acceptance decisions, and reasons; they do not contain SQL text or bound values. Only the most recent 200 reports are kept in each process. Early request rejections may not have a saved report.
+Gated requests normally receive `X-Request-Id`. Retrieve their report with `GET /api/requests/{id}`. GraphQL also includes request and index-policy information in `extensions`. Reports contain plan costs, scan descriptions, acceptance decisions, and reasons; they do not contain SQL text or bound values. Cluster mode stores reports in PostgreSQL with a five-minute TTL, readable from any replica. Standalone development mode keeps the latest 200 reports locally. Early request rejections may not have a saved report.
 
 | Symptom | Meaning / next step |
 |---|---|
